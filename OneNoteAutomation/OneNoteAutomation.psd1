@@ -25,7 +25,7 @@ See https://github.com/knutkj/OneNoteAutomation for more information.'
 
     PrivateData = @{
         PSData = @{
-            Tags = @('OneNote', 'Automation')
+            Tags = 'OneNote', 'Automation', 'PSEdition_Desktop', 'Windows'
             ProjectUri = 'https://github.com/knutkj/OneNoteAutomation'
             LicenseUri = 'https://github.com/knutkj/OneNoteAutomation/blob/main/LICENSE'
 

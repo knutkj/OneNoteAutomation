@@ -1,12 +1,16 @@
 [![Publish PowerShell Module](https://github.com/knutkj/OneNoteAutomation/actions/workflows/publish.yml/badge.svg)](https://github.com/knutkj/OneNoteAutomation/actions/workflows/publish.yml)
+[![PowerShell Gallery Compatibility](https://img.shields.io/powershellgallery/p/OneNoteAutomation)](https://www.powershellgallery.com/packages/OneNoteAutomation)
 
 # Getting started with OneNoteAutomation
 
 OneNoteAutomation is an open-source PowerShell module (not affiliated with or
 supported by Microsoft) that provides a set of cmdlets for automating OneNote
-operations from PowerShell scripts. Instead of working with COM objects
-directly, you can use familiar PowerShell patterns like piping, filtering, and
-parameter binding for a more natural scripting experience.
+operations from PowerShell scripts. The module is published to the
+[PowerShell Gallery](https://www.powershellgallery.com/packages/OneNoteAutomation)
+(Microsoft's official repository for PowerShell modules) and can be installed
+with `Install-Module`. Instead of working with COM objects directly, you can use
+familiar PowerShell patterns like piping, filtering, and parameter binding for a
+more natural scripting experience.
 
 ## Prerequisites
 
@@ -235,4 +239,5 @@ Update-OneNotePage -ID $pageId -Content $content -Verbose
 
 [1]: https://www.powershellgallery.com/packages/OneNoteAutomation
 [2]: https://github.com/knutkj/OneNoteAutomation
-[3]: https://learn.microsoft.com/en-us/office/client-developer/onenote/onenote-developer-reference
+[3]:
+  https://learn.microsoft.com/en-us/office/client-developer/onenote/onenote-developer-reference
