@@ -23,30 +23,17 @@ jobs:
       - name: Prepare module version
         shell: pwsh
         run: |
-          # The GitHub release tag is exposed as GITHUB_REF_NAME.
-          # If the tag is "v1.2.3", we trim the leading "v" to get "1.2.3".
-          # If the tag is "v1.2.3-preview1", we split it into:
-          # - ModuleVersion: 1.2.3
-          # - Prerelease:   preview1
-          $manifestPath = Join-Path $PWD 'OneNoteAutomation/OneNoteAutomation.psd1'
-          $versionTag = $env:GITHUB_REF_NAME.TrimStart('v')
-          $versionParts = $versionTag -split '-', 2
-          $moduleVersion = $versionParts[0]
-          $prerelease = if ($versionParts.Count -gt 1) { $versionParts[1] } else { $null }
-          Write-Host "Setting module version to $moduleVersion"
-          # Update-ModuleManifest writes the version into the .psd1 *in the CI workspace*.
-          # This change is NOT committed back to the repo; it only exists for this run.
-          if ($prerelease) {
-            Write-Host "Setting prerelease label to $prerelease"
-            Update-ModuleManifest -Path $manifestPath -ModuleVersion $moduleVersion -Prerelease $prerelease
-          } else {
-            Update-ModuleManifest -Path $manifestPath -ModuleVersion $moduleVersion
-          }
+          # Update manifest with dynamic data from the GitHub release:
+          # - ModuleVersion from release tag (e.g., v1.2.3 → 1.2.3).
+          # - Prerelease suffix if present (e.g., v1.2.3-preview1).
+          # - FunctionsToExport discovered from Public/*.ps1 files.
+          # - ReleaseNotes extracted from GitHub release description.
+          ./scripts/Update-ModuleManifest.ps1
 
       - name: Stage README for PowerShell Gallery
         shell: pwsh
         run: |
-          # PowerShell Gallery displays README.md when it is present in the module root.
+          # Include README.md in the module package for consumers who download it.
           # Copy the repo README into the module folder so it is packaged and published.
           Copy-Item -Path ./README.md -Destination ./OneNoteAutomation/README.md -Force
 
@@ -61,6 +48,7 @@ jobs:
           if (-not $env:PSGALLERY_API_KEY) {
             throw 'PSGALLERY_API_KEY secret is not set.'
           }
+
           # Publish-Module packages the module from the path and pushes it to PSGallery.
           # The version used is the one we wrote into the manifest above.
           Publish-Module -Path ./OneNoteAutomation -NuGetApiKey $env:PSGALLERY_API_KEY -Repository PSGallery
