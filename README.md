@@ -14,7 +14,7 @@ more natural scripting experience.
 
 ## Prerequisites
 
-- **PowerShell** on Windows.
+- **PowerShell 5.1** on Windows.
 - **Microsoft OneNote** desktop client application.
 
 ## Installation
@@ -108,6 +108,14 @@ Get-OneNoteNotebook -Name "Work*"
 Get-OneNoteNotebook "Diary" | Get-OneNoteSection
 ```
 
+### Get the Current Page
+
+Get the currently active page in OneNote:
+
+```powershell
+Get-OneNotePage -Current
+```
+
 ### Get Pages from a Section
 
 ```powershell
@@ -116,19 +124,24 @@ Get-OneNoteNotebook "Diary" |
   Get-OneNotePage
 ```
 
-Or using argument completion for a more concise approach:
+Or use `Get-OneNoteSection` directly for a more convenient approach:
 
 ```powershell
-Get-OneNoteSection Diary Daily | Get-OneNotePage
+Get-OneNoteSection -NotebookName "Diary" -Name "Daily" | Get-OneNotePage
 ```
+
+This skips the need to call `Get-OneNoteNotebook` first, allowing you to specify
+both the notebook and section name in a single command.
 
 ### Get a Specific Page with Content
 
 ```powershell
-Get-OneNotePage -ID $sectionId -Name "2025-01-15" -Content
+Get-OneNotePage -Name "2025-01-15" -Content
 ```
 
 The `-Content` switch retrieves the page's XML content, useful for modification.
+This example assumes there's only one page with that name across all your
+notebooks and sections.
 
 ### Navigate to a Page in the UI
 
@@ -161,13 +174,13 @@ Get-OneNoteSection -NotebookName "Diary" -Name "Daily" |
 ### Update Page Content
 
 ```powershell
-$page = Get-OneNotePage -ID $section.ID -Name "2025-01-15" -Content
+$page = Get-OneNotePage -Section $section -Name "2025-01-15" -Content
 
 # Modify the XML as needed
 $page.Content.Page.Title.OE.T.'#cdata-section' = "New Title"
 
 # Update the page
-Update-OneNotePage -ID $page.ID -Content $page.Content
+Update-OneNotePage -Content $page.Content
 ```
 
 ## Tips and Best Practices
@@ -192,11 +205,38 @@ design of the module.
 
 ### Use Argument Completion
 
-Argument completers suggest available notebook and section names:
+The module leverages PowerShell's argument completion feature to provide
+intelligent suggestions. Press Tab or Ctrl+Space after parameter names to see
+all available options queried directly from your OneNote data. When you type
+partial values, the suggestions automatically narrow to matching entries:
 
 ```powershell
-Get-OneNoteSection -NotebookName <Tab>  # Suggests notebook names
+Get-OneNoteSection -NotebookName <Tab>  # Suggests notebook names.
+Get-OneNoteSection -Name <Tab>          # Suggests section names.
 ```
+
+The completers work together contextually. When you specify a notebook name
+first, the section name completion filters suggestions to only that notebook:
+
+```powershell
+# Shows only sections in "Work" notebook.
+Get-OneNoteSection -NotebookName "Work" -Name <Tab>
+```
+
+This integration makes the available parameter values more discoverable and
+reduces the need to remember exact notebook or section names.
+
+For maximum convenience, you can also use positional parameters with argument
+completion:
+
+```powershell
+# First parameter is notebook name, second is section name.
+Get-OneNoteSection <Tab> <Tab>  # Suggests notebook names, then section names.
+```
+
+This allows for very concise commands once you're familiar with the parameter
+order, combining the brevity of positional parameters with the discoverability
+of argument completion.
 
 ### Handle XML Content Carefully
 
@@ -209,10 +249,10 @@ Page content is returned as XML. When modifying:
 Example:
 
 ```powershell
-$page = Get-OneNotePage -ID $sectionId -Name "MyPage" -Content
+$page = Get-OneNotePage -Name "MyPage" -Content # Assumes unique page title.
 $xml = $page.Content
 $xml.Page.Title.OE.T.'#cdata-section' = "Updated Title"
-Update-OneNotePage -ID $page.ID -Content $xml
+Update-OneNotePage -Content $xml
 ```
 
 ### Logging and Debugging
@@ -220,7 +260,7 @@ Update-OneNotePage -ID $page.ID -Content $xml
 Use `-Verbose` to see detailed operation logs:
 
 ```powershell
-Update-OneNotePage -ID $pageId -Content $content -Verbose
+Update-OneNotePage -Content $content -Verbose
 ```
 
 ## Next Steps
