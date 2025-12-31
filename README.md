@@ -214,9 +214,9 @@ $page | Update-OneNotePage
 
 ## Samples
 
-The `samples/` directory contains reusable scripts demonstrating common page
-manipulation patterns. These scripts accept page elements from the pipeline and
-pass them through, enabling powerful composition:
+The [`samples/`](samples/) directory contains reusable scripts demonstrating
+common page manipulation patterns. These scripts accept page elements from the
+pipeline and pass them through, enabling powerful composition:
 
 ```powershell
 Use-ComObject -ProgId OneNote.Application -Script {
@@ -231,6 +231,11 @@ Use-ComObject -ProgId OneNote.Application -Script {
 This pipeline retrieves the current page, generates a table of contents from h1
 headings, applies consistent heading spacing, and saves the changes—all in a
 single composable workflow with a shared COM object.
+
+- [**Set-OneNotePageToc**](samples/Set-OneNotePageToc.ps1) — Creates or updates
+  a clickable table of contents from h1 headings.
+- [**Set-OneNotePageSpacing**](samples/Set-OneNotePageSpacing.ps1) — Applies
+  consistent spacing to h1 headings.
 
 ## Tips and Best Practices
 
