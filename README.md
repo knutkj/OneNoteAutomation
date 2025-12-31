@@ -19,23 +19,51 @@ more natural scripting experience.
 
 ## Installation
 
-1. Install the module from the PowerShell Gallery:
+**Assumptions:** [Execution policy](#execution-policy) is `RemoteSigned` or less
+restrictive, [NuGet provider](#nuget-provider) is installed, and
+[PSGallery](#psgallery-trust) is trusted or you accept the prompt.
 
+### Quick Start (Admin)
+
+1. Open PowerShell as Administrator.
+
+2. Install and verify:
    ```powershell
    Install-Module -Name OneNoteAutomation
-   ```
-
-2. Import the module:
-
-   ```powershell
-   Import-Module OneNoteAutomation
-   ```
-
-3. Verify the installation:
-   ```powershell
    Get-OneNoteNotebook
    ```
-   This should display your OneNote notebooks without errors.
+
+The module auto-imports when you run any of its cmdlets. For non-admin
+installation, use `Install-Module -Name OneNoteAutomation -Scope CurrentUser`.
+
+### Setup Details
+
+If installation fails, check the assumptions below.
+
+#### Execution Policy
+
+PowerShell's execution policy must allow running scripts. Check with
+`Get-ExecutionPolicy`. If it returns `Restricted`, run:
+
+```powershell
+Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
+```
+
+#### NuGet Provider
+
+The first time you install any module from the PowerShell Gallery, PowerShell
+needs the NuGet provider to download packages. If prompted, type `Y` to install
+it.
+
+#### PSGallery Trust
+
+PSGallery (PowerShell Gallery) is not trusted by default as a security
+measure—you must confirm you want to install code from the internet. Type `Y`
+when prompted, or trust it permanently:
+
+```powershell
+Set-PSRepository -Name PSGallery -InstallationPolicy Trusted
+```
 
 ## Core Concepts
 
