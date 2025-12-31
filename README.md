@@ -212,6 +212,26 @@ $page.Title.OE.T.'#cdata-section' = "New Title"
 $page | Update-OneNotePage
 ```
 
+## Samples
+
+The `samples/` directory contains reusable scripts demonstrating common page
+manipulation patterns. These scripts accept page elements from the pipeline and
+pass them through, enabling powerful composition:
+
+```powershell
+Use-ComObject -ProgId OneNote.Application -Script {
+    param($app)
+    Get-OneNotePage -Current -Content -App $app |
+        Set-OneNotePageToc -App $app |
+        Set-OneNotePageSpacing -App $app |
+        Update-OneNotePage -App $app
+}
+```
+
+This pipeline retrieves the current page, generates a table of contents from h1
+headings, applies consistent heading spacing, and saves the changes—all in a
+single composable workflow with a shared COM object.
+
 ## Tips and Best Practices
 
 ### Store Objects for Later Use
