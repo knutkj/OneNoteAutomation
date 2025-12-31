@@ -66,11 +66,11 @@ if ($env:GITHUB_EVENT_PATH) {
         try {
             $githubEvent = Get-Content $env:GITHUB_EVENT_PATH | ConvertFrom-Json
             Write-Host "Parsed GitHub event JSON successfully"
-            if ($githubEvent.release.name) {
-                $ReleaseNotes = "$($env:GITHUB_REF_NAME): $($githubEvent.release.name)"
-                Write-Host "Extracted release notes: $ReleaseNotes"
+            if ($githubEvent.release.body) {
+                $ReleaseNotes = $githubEvent.release.body
+                Write-Host "Extracted release notes from release body"
             } else {
-                Write-Host "No release name found in GitHub event"
+                Write-Host "No release body found in GitHub event"
             }
         } catch {
             Write-Warning "Could not extract release notes from GitHub event: $_"
