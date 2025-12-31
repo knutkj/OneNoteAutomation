@@ -77,7 +77,6 @@ function Get-OneNoteHierarchy {
     }
 
     if (-not $OneNoteApplication) {
-        . $PSScriptRoot/Use-ComObject.ps1
         return Use-ComObject -ProgId OneNote.Application -Script $script
     }
     else {

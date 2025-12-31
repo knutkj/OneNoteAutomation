@@ -1,46 +1,46 @@
 #
 # .SYNOPSIS
-# Updates the content of a OneNote page using the COM API.
+# Updates the content of a OneNote page.
 #
 # .DESCRIPTION
-# Accepts page content XML from the pipeline or via parameters and updates the
-# page content in OneNote. The Content parameter should be a
-# System.Xml.XmlDocument containing the page's XML structure. If no OneNote
-# application object is provided, it is created and disposed automatically.
+# Accepts a page XML element from the pipeline or a page XML document via
+# parameter and updates the page in OneNote. Validates that the provided XML
+# has the expected OneNote page structure before updating.
 #
 # .EXAMPLE
-# # Update a page's content after modifying its XML.
-# $page = Get-OneNotePage -Section $section -Name "MyPage" -Content
-# $page.Content.Page.Title.OE.T.'#cdata-section' = "Updated Title"
+# # Update a page after modifying its XML element.
+# $page = Get-OneNotePage -Current -Content
+# $page.Title.OE.T.'#cdata-section' = "Updated Title"
 # $page | Update-OneNotePage
 #
 # .EXAMPLE
-# # Update page content with shared COM object for better performance.
+# # Update page with shared COM object for better performance.
 # Use-ComObject -ProgId OneNote.Application -Script {
 #     param($OneNote)
-#     $section = Get-OneNoteSection -NotebookName "Work" -Name "Projects" -App $OneNote
-#     $page = $section | Get-OneNotePage -Name "Bathroom" -Content -App $OneNote
+#     $page = Get-OneNotePage -Current -Content -App $OneNote
 #     # Modify content...
-#     Update-OneNotePage -Content $page.Content -App $OneNote
+#     $page | Update-OneNotePage -App $OneNote
 # }
 #
 # .OUTPUTS
 # None. This cmdlet does not return any objects.
 #
 # .NOTES
-# This cmdlet calls the UpdatePageContent method of the OneNote COM API. The
-# Content parameter must contain valid OneNote page XML structure. Always
-# retrieve page content with the -Content switch when using Get-OneNotePage
-# before attempting to update it.
+# The page must be retrieved with -Content to get a modifiable XML element.
+# This cmdlet validates that the XML document element is a OneNote Page before
+# calling the update.
 #
 function Update-OneNotePage {
   [CmdletBinding()]
   param(
-    # The XML content to update the page with. Must be a System.Xml.XmlDocument
-    # object containing valid OneNote page XML. Can be provided via pipeline
-    # (ValueFromPipelineByPropertyName) or as a parameter.
-    [Parameter(ValueFromPipelineByPropertyName = $true, Mandatory = $true)]
-    [System.Xml.XmlDocument]$Content,
+    # A page XML element retrieved from Get-OneNotePage -Content. The element's
+    # OwnerDocument will be validated and used for the update.
+    [Parameter(ParameterSetName = 'Element', ValueFromPipeline = $true, Mandatory = $true)]
+    [System.Xml.XmlElement]$Page,
+
+    # A complete page XML document. The document element must be a OneNote Page.
+    [Parameter(ParameterSetName = 'Document', Mandatory = $true)]
+    [System.Xml.XmlDocument]$PageDocument,
 
     # An existing OneNote.Application COM object. If not provided, a new COM
     # object will be created and automatically disposed after the operation.
@@ -65,8 +65,22 @@ function Update-OneNotePage {
 
     $app = $OneNoteApplication
 
-    Write-Verbose -Message "Calling UpdatePageContent."
-    $app.UpdatePageContent($Content.OuterXml)
+    # Determine the document to use based on parameter set.
+    if ($PSCmdlet.ParameterSetName -eq 'Element') {
+      if (-not ($Page | Test-OneNotePageHasContent)) {
+        throw "Invalid page element: must be a full page element from Get-OneNotePage -Content, not a lightweight metadata element."
+      }
+      $doc = $Page.OwnerDocument
+    }
+    else {
+      if (-not ($PageDocument | Test-OneNotePageHasContent)) {
+        throw "Invalid document: expected 'Page' root element but found '$($PageDocument.DocumentElement.LocalName)'."
+      }
+      $doc = $PageDocument
+    }
+
+    Write-Verbose -Message "Calling UpdatePageContent for page '$($doc.DocumentElement.ID)'."
+    $app.UpdatePageContent($doc.OuterXml)
     Write-Verbose -Message "Process block complete."
   }
 
