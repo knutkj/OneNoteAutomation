@@ -14,7 +14,6 @@ function Get-OneNoteNotebook {
         # The name of the notebook to retrieve.
         [Parameter(Position = 0)]
         [SupportsWildcards()]
-        [ArgumentCompleter({ __NotebookNameArgumentCompleter @args })]
         [string]$Name = '*',
 
         # The OneNote application object. If not provided, it will be created.
@@ -41,4 +40,8 @@ function Get-OneNoteNotebook {
     }
 
     end { if ($disposeApp) { Remove-ComObject -ComObject $OneNoteApplication } }
+}
+
+Get-Command Get-OneNoteNotebook | Register-ArgumentCompleterMap -Map @{
+    Name = { Get-OneNoteNotebookNameCompletion @args }
 }

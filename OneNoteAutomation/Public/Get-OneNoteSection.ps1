@@ -22,7 +22,6 @@ function Get-OneNoteSection {
 
         # Name of the notebook to search.
         [Parameter(ParameterSetName = 'ByNotebookName', Position = 0)]
-        [ArgumentCompleter({ __NotebookNameArgumentCompleter @args })]
         [string]$NotebookName,
 
         # Name of the section to retrieve, supporting wildcards and prefix
@@ -30,7 +29,6 @@ function Get-OneNoteSection {
         [Parameter(ParameterSetName = 'ByNotebookName', Position = 1)]
         [Parameter(ParameterSetName = 'FromPipeline')]
         [SupportsWildcards()]
-        [ArgumentCompleter({ __SectionNameArgumentCompleter @args })]
         [string]$Name = "*",
 
         # The OneNote application object. If not provided, it will be created.
@@ -94,4 +92,9 @@ function Get-OneNoteSection {
             Remove-ComObject -ComObject $OneNoteApplication
         }
     }
+}
+
+Get-Command Get-OneNoteSection | Register-ArgumentCompleterMap -Map @{
+    NotebookName = { Get-OneNoteNotebookNameCompletion @args }
+    Name         = { Get-OneNoteSectionNameCompletion @args }
 }
