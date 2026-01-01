@@ -31,6 +31,10 @@ function Get-OneNoteSection {
         [SupportsWildcards()]
         [string]$Name = "*",
 
+        # If specified, retrieves only the currently viewed section in OneNote.
+        [Parameter(ParameterSetName = 'Current', Mandatory = $true)]
+        [switch]$Current,
+
         # The OneNote application object. If not provided, it will be created.
         [Alias('App')]
         [Parameter()]
@@ -47,43 +51,55 @@ function Get-OneNoteSection {
 
     process {
         $hsSections = 3 # HierarchyScope.hsSections
-        $parameterSet = $PSCmdlet.ParameterSetName
         $app = $OneNoteApplication
-        $notebooks = @()
+        $sections = @()
 
-        if ($NotebookName) {
-            $notebooks = Get-OneNoteNotebook -Name $NotebookName -App $App
-        }
-        elseif ($Notebook) {
-            $notebooks = @($Notebook)
-        }
-        else {
-            # If no notebook specified, get all sections from root hierarchy.
-            $rootHierarchy = Get-OneNoteHierarchy `
-                -Scope $hsSections `
-                -StartNodeId $null `
-                -OneNoteApplication $App
-
-            $sections = $rootHierarchy.Notebooks.Notebook.Section |
-            Where-Object -Property Name -Like -Value $Name
-
-            # Tag each section with custom type name
-            return $sections | ForEach-Object `
-                -Process { $_.PSTypeNames.Insert(0, 'OneNote.Section'); $_ }
-        }
-
-        foreach ($nb in $notebooks) {
+        if ($PSCmdlet.ParameterSetName -eq 'Current') {
+            # First get the current notebook,
+            # then search for current section within it.
+            $currentNotebook = Get-OneNoteNotebook -Current -App $app
             $hierarchy = Get-OneNoteHierarchy `
                 -Scope $hsSections `
-                -StartNodeId $nb.ID `
-                -OneNoteApplication $App
+                -StartNodeId $currentNotebook.ID `
+                -OneNoteApplication $app
 
-            $sections = $hierarchy.Notebook.Section |
-            Where-Object -Property Name -Like -Value $Name
+            $sections = @($hierarchy.Notebook.Section |
+                Where-Object -Property isCurrentlyViewed -EQ true)
 
-            # Tag each section with custom type name.
-            return $sections | ForEach-Object `
-                -Process { $_.PSTypeNames.Insert(0, 'OneNote.Section'); $_ }
+            if ($sections.Count -gt 1) {
+                throw "There are currently $($sections.Count) sections that are viewed."
+            }
+        }
+        else {
+            # Determine which notebooks to retrieve sections from.
+            if ($NotebookName) {
+                $notebooks = Get-OneNoteNotebook -Name $NotebookName -App $app
+            }
+            elseif ($Notebook) {
+                $notebooks = @($Notebook)
+            }
+            else {
+                # Get all notebooks
+                $notebooks = Get-OneNoteNotebook -App $app
+            }
+
+            # Fetch sections for each notebook.
+            foreach ($nb in $notebooks) {
+                $hierarchy = Get-OneNoteHierarchy `
+                    -Scope $hsSections `
+                    -StartNodeId $nb.ID `
+                    -OneNoteApplication $app
+
+                $sections += @($hierarchy.Notebook.Section)
+            }
+
+            # Apply name filter.
+            $sections = @($sections | Where-Object -Property Name -Like -Value $Name)
+        }
+
+        # Tag each section with custom type name.
+        $sections | ForEach-Object -Process { 
+            $_.PSTypeNames.Insert(0, 'OneNote.Section'); $_ 
         }
     }
 

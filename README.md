@@ -164,12 +164,13 @@ both the notebook and section name in a single command.
 ### Get a Specific Page with Content
 
 ```powershell
-Get-OneNotePage -Name "2025-01-15" -Content
+$page = Get-OneNotePage -Name "2025-01-15" -Content
 ```
 
-The `-Content` switch retrieves the page's XML content, useful for modification.
-This example assumes there's only one page with that name across all your
-notebooks and sections.
+The `-Content` switch retrieves the full page XML element instead of lightweight
+metadata. This is required for inspecting or modifying page content. This
+example assumes there's only one page with that name across all your notebooks
+and sections.
 
 ### Navigate to a Page in the UI
 
@@ -202,14 +203,39 @@ Get-OneNoteSection -NotebookName "Diary" -Name "Daily" |
 ### Update Page Content
 
 ```powershell
-$page = Get-OneNotePage -Section $section -Name "2025-01-15" -Content
+$page = Get-OneNotePage -Current -Content
 
-# Modify the XML as needed
-$page.Content.Page.Title.OE.T.'#cdata-section' = "New Title"
+# Modify the XML as needed.
+$page.Title.OE.T.'#cdata-section' = "New Title"
 
-# Update the page
-Update-OneNotePage -Content $page.Content
+# Update the page.
+$page | Update-OneNotePage
 ```
+
+## Samples
+
+The [`samples/`](samples/) directory contains reusable scripts demonstrating
+common page manipulation patterns. These scripts accept page elements from the
+pipeline and pass them through, enabling powerful composition:
+
+```powershell
+Use-ComObject -ProgId OneNote.Application -Script {
+    param($app)
+    Get-OneNotePage -Current -Content -App $app |
+        Set-OneNotePageToc -App $app |
+        Set-OneNotePageSpacing -App $app |
+        Update-OneNotePage -App $app
+}
+```
+
+This pipeline retrieves the current page, generates a table of contents from h1
+headings, applies consistent heading spacing, and saves the changes—all in a
+single composable workflow with a shared COM object.
+
+- [**Set-OneNotePageToc**](samples/Set-OneNotePageToc.ps1) — Creates or updates
+  a clickable table of contents from h1 headings.
+- [**Set-OneNotePageSpacing**](samples/Set-OneNotePageSpacing.ps1) — Applies
+  consistent spacing to h1 headings.
 
 ## Tips and Best Practices
 
@@ -224,7 +250,7 @@ $notebook = Get-OneNoteNotebook "Diary"
 # Later, pipe the object to retrieve sections within that notebook.
 $sections = $notebook | Get-OneNoteSection
 
-# Or pipe directly to Show-OneNote
+# Or pipe directly to Show-OneNote.
 $notebook | Show-OneNote
 ```
 
@@ -268,19 +294,18 @@ of argument completion.
 
 ### Handle XML Content Carefully
 
-Page content is returned as XML. When modifying:
+Page content is returned as an XML element. When modifying:
 
-1. Always retrieve content with `-Content` flag.
+1. Always retrieve with `-Content` flag to get the full page XML element.
 2. Use XPath queries or XML navigation to find elements.
-3. Update and save back with `Update-OneNotePage`.
+3. Pipe the modified element to `Update-OneNotePage`.
 
 Example:
 
 ```powershell
-$page = Get-OneNotePage -Name "MyPage" -Content # Assumes unique page title.
-$xml = $page.Content
-$xml.Page.Title.OE.T.'#cdata-section' = "Updated Title"
-Update-OneNotePage -Content $xml
+$page = Get-OneNotePage -Name "MyPage" -Content  # Assumes unique page title.
+$page.Title.OE.T.'#cdata-section' = "Updated Title"
+$page | Update-OneNotePage
 ```
 
 ### Logging and Debugging

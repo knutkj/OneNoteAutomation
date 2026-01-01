@@ -8,17 +8,29 @@
 # with updated links. TOC items are marked with metadata to enable future
 # updates.
 #
-# .EXAMPLE
-# # Update TOC for a specific page.
-# $page = Get-OneNotePage -Current -Content
-# Set-OneNotePageToc -ID $page.ID -Content $page.Content
+# If a lightweight page element (metadata only) is provided, the full page
+# content is retrieved automatically. The modified page element is passed
+# through for pipeline chaining to Update-OneNotePage.
 #
 # .EXAMPLE
-# # Pipeline usage with page object.
-# Get-OneNotePage -Current -Content | Set-OneNotePageToc
+# # Update TOC for the current page.
+# Get-OneNotePage -Current -Content | Set-OneNotePageToc | Update-OneNotePage
+#
+# .EXAMPLE
+# # Update TOC for the current page using -Current switch.
+# Set-OneNotePageToc -Current | Update-OneNotePage
+#
+# .EXAMPLE
+# # Update and save TOC for the current page in one command.
+# Set-OneNotePageToc -Current -Save
+#
+# .EXAMPLE
+# # Works with lightweight page elements too (fetches content internally).
+# Get-OneNotePage -Current | Set-OneNotePageToc | Update-OneNotePage
 #
 # .OUTPUTS
-# None. This cmdlet updates the page content in OneNote directly.
+# System.Xml.XmlElement. The modified page element for pipeline chaining to
+# Update-OneNotePage.
 #
 # .NOTES
 # TOC items are tagged with metadata (pscomlib.kind = "toc-item") to identify
@@ -27,15 +39,17 @@
 function Set-OneNotePageToc {
     [CmdletBinding()]
     param(
-        # The unique identifier of the page to update.
-        [Parameter(ValueFromPipelineByPropertyName = $true, Mandatory = $true)]
-        [string]$ID,
+        # The page XML element. Can be a lightweight element (metadata only) or
+        # a full page element from Get-OneNotePage -Content.
+        [Parameter(ParameterSetName = 'Page', ValueFromPipeline = $true, Mandatory = $true)]
+        [System.Xml.XmlElement]$Page,
 
-        # The XML content of the page. Must be a System.Xml.XmlDocument object
-        # containing the page's XML structure with -Content switch from
-        # Get-OneNotePage.
-        [Parameter(ValueFromPipelineByPropertyName = $true, Mandatory = $true)]
-        [System.Xml.XmlDocument]$Content,
+        # If specified, operates on the currently viewed page in OneNote.
+        [Parameter(ParameterSetName = 'Current', Mandatory = $true)]
+        [switch]$Current,
+
+        # If specified, automatically saves the changes to OneNote.
+        [switch]$Save,
 
         # An existing OneNote.Application COM object. If not provided, a new COM
         # object will be created and automatically disposed after the operation.
@@ -85,16 +99,37 @@ $(& $each $m { param($i) @"
         $app = $OneNoteApplication
         $nsMap = @{ "one" = $ns }
 
+        # Get the page to work on
+        if ($PSCmdlet.ParameterSetName -eq 'Current') {
+            $Page = Get-OneNotePage -Current -App $app
+        }
+
+        $pageId = $Page.ID
+        if (-not $pageId) {
+            throw "Page ID not found. Ensure the element is a valid OneNote page."
+        }
+
+        Write-Verbose -Message "Processing page ID: $pageId."
+
+        # If lightweight element, fetch full content.
+        $pageElement = $Page
+        if (-not ($Page | Test-OneNotePageHasContent)) {
+            Write-Verbose -Message "Lightweight page element detected, fetching full content."
+            $pageElement = Get-OneNotePageContent -PageId $pageId -App $app -Annotate
+        }
+
+        $doc = $pageElement.OwnerDocument
+
         # Finding h1 style definitions.
         $tocItemSelector = '//one:QuickStyleDef[@name="h1"]'
-        $defs = @($Content | Select-Xml -Namespace $nsMap -XPath $tocItemSelector).Node
+        $defs = @($doc | Select-Xml -Namespace $nsMap -XPath $tocItemSelector).Node
         $indexes = @($defs.index)
         Write-Verbose -Message (
             'Found {0} quick style definitions for Level 1 headings.' -f $indexes.Count)
 
         # Finding h1 headings.
         $headingCandidatesPattern = '/one:Page/one:Outline/one:OEChildren/one:OE[@quickStyleIndex]'
-        $l1Headings = @($Content |
+        $l1Headings = @($doc |
             Select-Xml -Namespace $nsMap -XPath $headingCandidatesPattern |
             ForEach-Object -Process { $_.Node } |
             Where-Object -Property quickStyleIndex -In -Value $indexes)
@@ -106,7 +141,7 @@ $(& $each $m { param($i) @"
         $tocItems = $l1Headings | ForEach-Object {
             $node = $_
             $link = ''
-            $app.GetHyperlinkToObject($ID, $node.objectID, [ref]$link)
+            $app.GetHyperlinkToObject($pageId, $node.objectID, [ref]$link)
             $text = $node.T.InnerText
             Write-Verbose ("TOC item: Text='{0}', Link='{1}'" -f $text, $link)
             [PSCustomObject]@{
@@ -118,12 +153,12 @@ $(& $each $m { param($i) @"
         # Generate new TOC elements.
         Write-Verbose -Message "Generating new TOC elements ..."
         $newTocElements = @((& $tocSectionTemplate $tocItems).Outline.ChildNodes.OE |
-            ForEach-Object -Process { $Content.ImportNode($_, $true) })
+            ForEach-Object -Process { $doc.ImportNode($_, $true) })
         Write-Verbose ("Generated and imported {0} new TOC elements." -f $newTocElements.Count)
 
         # Find and remove existing TOC elements.
         $tocItemSelector = '//one:OE[one:Meta[@name="pscomlib.kind" and @content="toc-item"]]'
-        $existingTocElements = @($Content |
+        $existingTocElements = @($doc |
             Select-Xml -Namespace $nsMap -XPath $tocItemSelector |
             ForEach-Object -Process { $_.Node })
         Write-Verbose ("Found {0} existing TOC elements." -f $existingTocElements.Count)
@@ -136,12 +171,18 @@ $(& $each $m { param($i) @"
         [Array]::Reverse($newTocElements)
         Write-Verbose -Message "Prepending TOC elements to page."
         $newTocElements |
-        ForEach-Object -Process { $Content.Page.Outline.ChildNodes.PrependChild($_) | Out-Null }
+        ForEach-Object -Process { $pageElement.Outline.ChildNodes.PrependChild($_) | Out-Null }
 
-        # Update the page content.
-        Write-Verbose -Message "Calling UpdatePageContent."
-        $app.UpdatePageContent($Content.OuterXml)
-        Write-Verbose -Message "TOC update complete."
+        Write-Verbose -Message "TOC generation complete."
+
+        # Save changes if requested.
+        if ($Save) {
+            Write-Verbose -Message "Saving changes to OneNote."
+            $pageElement | Update-OneNotePage -App $app
+        }
+
+        # Pass through page element for pipeline chaining to Update-OneNotePage.
+        $pageElement
     }
 
     end {

@@ -1,5 +1,3 @@
-using namespace Microsoft.Office.Interop.OneNote
-
 #
 # .SYNOPSIS
 # Creates a new page in a specified OneNote section using the COM API and
@@ -78,10 +76,10 @@ function New-OneNotePage {
 
         # Set title if requested.
         if ($Title) {
-            [xml]$pageDoc = ''
-            $app.GetPageContent($newPageId, [ref]$pageDoc)
-            $pageDoc.Page.Title.OE.T.'#cdata-section' = $Title
-            $app.UpdatePageContent($pageDoc.OuterXml)
+            $page = Get-OneNotePageContent -PageId $newPageId -App $app
+            $page.Title.OE.style = ''
+            $page.Title.OE.T.'#cdata-section' = $Title
+            $app.UpdatePageContent($page.OwnerDocument.OuterXml)
         }
 
         # Set page level if requested.
@@ -89,7 +87,7 @@ function New-OneNotePage {
             $hierarchy = Get-OneNoteHierarchy -Scope $hsPages -Node $Id -App $app
             $pageNode = $hierarchy.Section.Page | Where-Object -Property ID -EQ $newPageId
             $pageNode.pageLevel = "$PageLevel"
-            $OneNoteApplication.UpdateHierarchy($hierarchy.OuterXml)
+            $app.UpdateHierarchy($hierarchy.OuterXml)
         }
 
         # Move page to a specific position if requested.
@@ -116,16 +114,13 @@ function New-OneNotePage {
                         $beforeNode = $pagesList[$targetIndex]
                         $hierarchy.Section.InsertBefore($pageNode, $beforeNode) | Out-Null
                     }
-                    $OneNoteApplication.UpdateHierarchy($hierarchy.OuterXml)
+                    $app.UpdateHierarchy($hierarchy.OuterXml)
                 }
             }
         }
 
         # Fetch the new page.
-        (Get-OneNoteHierarchy `
-            -Scope $hsSelf `
-            -StartNodeId $newPageId `
-            -OneNoteApplication $OneNoteApplication).Page
+        Get-OneNotePageContent -PageId $newPageId -App $app -Annotate
     }
 
     end {
