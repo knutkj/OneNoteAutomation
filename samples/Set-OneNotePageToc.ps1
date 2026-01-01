@@ -17,6 +17,14 @@
 # Get-OneNotePage -Current -Content | Set-OneNotePageToc | Update-OneNotePage
 #
 # .EXAMPLE
+# # Update TOC for the current page using -Current switch.
+# Set-OneNotePageToc -Current | Update-OneNotePage
+#
+# .EXAMPLE
+# # Update and save TOC for the current page in one command.
+# Set-OneNotePageToc -Current -Save
+#
+# .EXAMPLE
 # # Works with lightweight page elements too (fetches content internally).
 # Get-OneNotePage -Current | Set-OneNotePageToc | Update-OneNotePage
 #
@@ -33,8 +41,15 @@ function Set-OneNotePageToc {
     param(
         # The page XML element. Can be a lightweight element (metadata only) or
         # a full page element from Get-OneNotePage -Content.
-        [Parameter(ValueFromPipeline = $true, Mandatory = $true)]
+        [Parameter(ParameterSetName = 'Page', ValueFromPipeline = $true, Mandatory = $true)]
         [System.Xml.XmlElement]$Page,
+
+        # If specified, operates on the currently viewed page in OneNote.
+        [Parameter(ParameterSetName = 'Current', Mandatory = $true)]
+        [switch]$Current,
+
+        # If specified, automatically saves the changes to OneNote.
+        [switch]$Save,
 
         # An existing OneNote.Application COM object. If not provided, a new COM
         # object will be created and automatically disposed after the operation.
@@ -83,6 +98,11 @@ $(& $each $m { param($i) @"
     process {
         $app = $OneNoteApplication
         $nsMap = @{ "one" = $ns }
+
+        # Get the page to work on
+        if ($PSCmdlet.ParameterSetName -eq 'Current') {
+            $Page = Get-OneNotePage -Current -App $app
+        }
 
         $pageId = $Page.ID
         if (-not $pageId) {
@@ -154,6 +174,12 @@ $(& $each $m { param($i) @"
         ForEach-Object -Process { $pageElement.Outline.ChildNodes.PrependChild($_) | Out-Null }
 
         Write-Verbose -Message "TOC generation complete."
+
+        # Save changes if requested.
+        if ($Save) {
+            Write-Verbose -Message "Saving changes to OneNote."
+            $pageElement | Update-OneNotePage -App $app
+        }
 
         # Pass through page element for pipeline chaining to Update-OneNotePage.
         $pageElement

@@ -82,16 +82,20 @@ function Get-OneNotePage {
         $app = $OneNoteApplication
         $pages = @()
         if ($Current) {
-            $rootHierarchy = Get-OneNoteHierarchy `
+            # First get the current section,
+            # then search for current page within it.
+            $currentSection = Get-OneNoteSection -Current -App $app
+            
+            $hierarchy = Get-OneNoteHierarchy `
                 -Scope $hsPages `
-                -StartNodeId $null `
+                -StartNodeId $currentSection.ID `
                 -App $app
 
-            $pages = @($rootHierarchy.Notebooks.Notebook.Section.Page |
+            $pages = @($hierarchy.Section.Page |
                 Where-Object -Property isCurrentlyViewed -EQ true)
 
-            if ($viewedPages.Count -gt 1) {
-                throw "There are currently $($viewedPages.Count) pages that are viewed.)"
+            if ($pages.Count -gt 1) {
+                throw "There are currently $($pages.Count) pages that are viewed."
             }
         }
         else {

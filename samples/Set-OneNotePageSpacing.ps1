@@ -17,6 +17,14 @@
 # Get-OneNotePage -Current -Content | Set-OneNotePageSpacing | Update-OneNotePage
 #
 # .EXAMPLE
+# # Apply spacing fixes to the current page using -Current switch.
+# Set-OneNotePageSpacing -Current | Update-OneNotePage
+#
+# .EXAMPLE
+# # Apply spacing fixes and save to the current page in one command.
+# Set-OneNotePageSpacing -Current -Save
+#
+# .EXAMPLE
 # # Works with lightweight page elements too (fetches content internally).
 # Get-OneNotePage -Current | Set-OneNotePageSpacing | Update-OneNotePage
 #
@@ -33,8 +41,15 @@ function Set-OneNotePageSpacing {
     param(
         # The page XML element. Can be a lightweight element (metadata only) or
         # a full page element from Get-OneNotePage -Content.
-        [Parameter(ValueFromPipeline = $true, Mandatory = $true)]
+        [Parameter(ParameterSetName = 'Page', ValueFromPipeline = $true, Mandatory = $true)]
         [System.Xml.XmlElement]$Page,
+
+        # If specified, operates on the currently viewed page in OneNote.
+        [Parameter(ParameterSetName = 'Current', Mandatory = $true)]
+        [switch]$Current,
+
+        # If specified, automatically saves the changes to OneNote.
+        [switch]$Save,
 
         # An existing OneNote.Application COM object. If not provided, a new COM
         # object will be created and automatically disposed after the operation.
@@ -55,6 +70,11 @@ function Set-OneNotePageSpacing {
         $app = $OneNoteApplication
         $ns = 'http://schemas.microsoft.com/office/onenote/2013/onenote'
         $nsMap = @{ "one" = $ns }
+
+        # Get the page to work on
+        if ($PSCmdlet.ParameterSetName -eq 'Current') {
+            $Page = Get-OneNotePage -Current -App $app
+        }
 
         $pageId = $Page.ID
         if (-not $pageId) {
@@ -94,6 +114,12 @@ function Set-OneNotePageSpacing {
         $l1Headings | ForEach-Object { $_.RemoveAttribute("spaceBefore") }
 
         Write-Verbose -Message "Spacing fixes complete."
+
+        # Save changes if requested
+        if ($Save) {
+            Write-Verbose -Message "Saving changes to OneNote."
+            $pageElement | Update-OneNotePage -App $app
+        }
 
         # Pass through page element for pipeline chaining to Update-OneNotePage.
         $pageElement
