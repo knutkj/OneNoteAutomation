@@ -85,7 +85,12 @@ function Set-OneNotePageSpacing {
 
         # If lightweight element, fetch full content.
         $pageElement = $Page
-        if (-not ($Page | Test-OneNotePageHasContent)) {
+        $isFullContent = (
+            $Page -is [System.Xml.XmlElement] -and
+            $Page.OwnerDocument.DocumentElement.LocalName -eq 'Page' -and
+            $Page.OwnerDocument.DocumentElement -eq $Page
+        )
+        if (-not $isFullContent) {
             Write-Verbose -Message "Lightweight page element detected, fetching full content."
             $pageElement = Get-OneNotePageContent -PageId $pageId -App $app -Annotate
         }
