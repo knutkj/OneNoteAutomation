@@ -25,6 +25,10 @@
 # Get-OneNotePage -Current
 #
 # .EXAMPLE
+# # Get a specific page by ID.
+# Get-OneNotePage -Id "{12345678-1234-5678-9012-...}{1}{...}"
+#
+# .EXAMPLE
 # # Pipeline flow: notebook -> sections -> pages.
 # Get-OneNoteNotebook "Personal" | Get-OneNoteSection | Get-OneNotePage
 #
@@ -42,20 +46,25 @@
 function Get-OneNotePage {
     [CmdletBinding()]
     param(
-        # Section object(s) from the pipeline. Each section should have an ID
-        # property. If not provided, retrieves pages from all sections.
-        [Parameter(ParameterSetName = 'Pipeline', ValueFromPipeline = $true)]
-        $Section,
-
-        # Name of the page to retrieve, supporting wildcards and prefix
-        # matching. Default is "*" (all pages).
-        [Parameter(Position = 0)]
-        [SupportsWildcards()]
-        [string]$Name = "*",
-
         # If specified, retrieves only the currently viewed page in OneNote.
         [Parameter(ParameterSetName = 'Current', Mandatory = $true)]
         [switch]$Current,
+
+        # The ID of a specific page to retrieve.
+        [Parameter(ParameterSetName = 'Id', Mandatory = $true)]
+        [string]$Id,
+
+        # Name of the page to retrieve, supporting wildcards and prefix
+        # matching. Default is "*" (all pages).
+        [Parameter(ParameterSetName = 'Pipeline', Position = 0)]
+        [SupportsWildcards()]
+        [string]$Name = "*",
+
+        # Section XML element to retrieve pages from. Can be provided via
+        # pipeline or directly. If not provided, retrieves pages from all
+        # sections.
+        [Parameter(ParameterSetName = 'Pipeline', ValueFromPipeline = $true)]
+        [System.Xml.XmlElement]$Section,
 
         # If specified, returns the full page XML element instead of lightweight
         # metadata. Required for page content inspection or modification.
@@ -80,58 +89,72 @@ function Get-OneNotePage {
     process {
         $hsPages = 4 # HierarchyScope.hsPages
         $app = $OneNoteApplication
+        
+        # Helper to get full page content by ID
+        $getPageContent = {
+            param($pageId)
+            [xml]$xml = ''
+            $app.GetPageContent($pageId, [ref]$xml)
+            $xml.Page
+        }
+        
+        # Helper to annotate and return page
+        $annotatePage = {
+            param($page)
+            $page.PSObject.TypeNames.Insert(0, 'OneNote.Page')
+            $page
+        }
+        
         $pages = @()
+        
         if ($Current) {
-            # First get the current section,
-            # then search for current page within it.
+            # Get current page from current section.
             $currentSection = Get-OneNoteSection -Current -App $app
+            $hierarchy = Get-OneNoteHierarchy -Scope $hsPages -StartNodeId $currentSection.ID -App $app
+            $pages = @($hierarchy.Section.Page | Where-Object -Property isCurrentlyViewed -EQ true)
             
-            $hierarchy = Get-OneNoteHierarchy `
-                -Scope $hsPages `
-                -StartNodeId $currentSection.ID `
-                -App $app
-
-            $pages = @($hierarchy.Section.Page |
-                Where-Object -Property isCurrentlyViewed -EQ true)
-
             if ($pages.Count -gt 1) {
                 throw "There are currently $($pages.Count) pages that are viewed."
             }
         }
+        elseif ($Id) {
+            # Get page by ID.
+            if ($Content) {
+                $pages = @(& $getPageContent $Id)
+            }
+            else {
+                # Get lightweight metadata from hierarchy.
+                $hierarchy = Get-OneNoteHierarchy -Scope $hsPages -StartNodeId $null -App $app
+                $pages = @($hierarchy.Notebooks.Notebook.Section.Page | Where-Object -Property ID -EQ $Id)
+            }
+        }
         else {
+            # Get pages from sections or all sections.
             if ($Section) {
-                # Handle section object from pipeline
-                $hierarchy = Get-OneNoteHierarchy `
-                    -Scope $hsPages `
-                    -StartNodeId $Section.ID `
-                    -App $app
-
+                $hierarchy = Get-OneNoteHierarchy -Scope $hsPages -StartNodeId $Section.ID -App $app
                 $pages = $hierarchy.Section.Page
             }
             else {
-                # If no section specified, get all pages from root hierarchy.
-                $rootHierarchy = Get-OneNoteHierarchy `
-                    -Scope $hsPages `
-                    -StartNodeId $null `
-                    -App $app
-
-                $pages = $rootHierarchy.Notebooks.Notebook.Section.Page
+                $hierarchy = Get-OneNoteHierarchy -Scope $hsPages -StartNodeId $null -App $app
+                $pages = $hierarchy.Notebooks.Notebook.Section.Page
             }
-
-            $pages = $pages |
+            
+            # Filter by name pattern.
+            $pages = $pages | 
             Where-Object -FilterScript { $_ } |
             Where-Object -Property Name -Like -Value $Name
         }
-
-        $pages |
-        ForEach-Object -Process {
+        
+        # Process and return pages.
+        $pages | ForEach-Object -Process {
             $page = $_
-            if ($Content) {
-                $page = Get-OneNotePageContent -PageId $_.ID -App $app
+            
+            # Get full content if requested (but not already fetched for Id parameter set).
+            if ($Content -and -not $Id) {
+                $page = & $getPageContent $_.ID
             }
-
-            $page.PSObject.TypeNames.Insert(0, 'OneNote.Page')
-            $page
+            
+            & $annotatePage $page
         }
     }
 

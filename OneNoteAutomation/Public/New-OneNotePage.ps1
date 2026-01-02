@@ -76,7 +76,7 @@ function New-OneNotePage {
 
         # Set title if requested.
         if ($Title) {
-            $page = Get-OneNotePageContent -PageId $newPageId -App $app
+            $page = Get-OneNotePage -Id $newPageId -Content -App $app
             if ($page.Title.OE.style) {
                 $page.Title.OE.style = ''
             }
@@ -123,7 +123,7 @@ function New-OneNotePage {
         }
 
         # Fetch the new page.
-        Get-OneNotePageContent -PageId $newPageId -App $app -Annotate
+        Get-OneNotePage -Id $newPageId -Content -App $app
     }
 
     end {
