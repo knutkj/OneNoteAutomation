@@ -77,7 +77,10 @@ function New-OneNotePage {
         # Set title if requested.
         if ($Title) {
             $page = Get-OneNotePageContent -PageId $newPageId -App $app
-            $page.Title.OE.style = ''
+            if ($page.Title.OE.style) {
+                $page.Title.OE.style = ''
+            }
+
             $page.Title.OE.T.'#cdata-section' = $Title
             $app.UpdatePageContent($page.OwnerDocument.OuterXml)
         }
