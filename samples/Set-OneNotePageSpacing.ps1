@@ -92,7 +92,7 @@ function Set-OneNotePageSpacing {
         )
         if (-not $isFullContent) {
             Write-Verbose -Message "Lightweight page element detected, fetching full content."
-            $pageElement = Get-OneNotePageContent -PageId $pageId -App $app -Annotate
+            $pageElement = Get-OneNotePage -Id $pageId -Content -App $app
         }
 
         $doc = $pageElement.OwnerDocument
@@ -123,7 +123,7 @@ function Set-OneNotePageSpacing {
         # Save changes if requested
         if ($Save) {
             Write-Verbose -Message "Saving changes to OneNote."
-            $pageElement | Update-OneNotePage -App $app
+            $pageElement = $pageElement | Update-OneNotePage -App $app
         }
 
         # Pass through page element for pipeline chaining to Update-OneNotePage.

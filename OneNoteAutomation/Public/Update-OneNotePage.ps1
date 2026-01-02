@@ -11,7 +11,7 @@
 # # Update a page after modifying its XML element.
 # $page = Get-OneNotePage -Current -Content
 # $page.Title.OE.T.'#cdata-section' = "Updated Title"
-# $page | Update-OneNotePage
+# $updatedPage = $page | Update-OneNotePage
 #
 # .EXAMPLE
 # # Update page with shared COM object for better performance.
@@ -23,7 +23,9 @@
 # }
 #
 # .OUTPUTS
-# None. This cmdlet does not return any objects.
+# System.Xml.XmlElement. The updated page element retrieved from OneNote
+# after the update is complete, allowing for pipeline chaining with the
+# latest version.
 #
 # .NOTES
 # The page must be retrieved with -Content to get a modifiable XML element.
@@ -81,6 +83,12 @@ function Update-OneNotePage {
 
     Write-Verbose -Message "Calling UpdatePageContent for page '$($doc.DocumentElement.ID)'."
     $app.UpdatePageContent($doc.OuterXml)
+    Write-Verbose -Message "Update complete. Retrieving updated page."
+    
+    # Retrieve and return the updated page.
+    $pageId = $doc.DocumentElement.ID
+    Get-OneNotePage -Id $pageId -Content -App $app
+    
     Write-Verbose -Message "Process block complete."
   }
 

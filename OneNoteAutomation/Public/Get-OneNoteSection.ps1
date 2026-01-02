@@ -8,11 +8,29 @@
 # notebook name parameter. Optionally filters for a section by name using
 # wildcard patterns and case-insensitive matching. If neither notebook objects
 # nor notebook name is provided, retrieves all sections across all notebooks.
+# Can also retrieve a specific section by ID.
+#
+# .EXAMPLE
+# # Get a specific section by ID.
+# Get-OneNoteSection -Id "{12345678-1234-5678-...}{1}{...}"
 #
 function Get-OneNoteSection {
-    [CmdletBinding(DefaultParameterSetName = 'ByNotebookName')]
+    [CmdletBinding()]
     param(
-        # Notebook object(s) from the pipeline only.
+        # If specified, retrieves only the currently viewed section in OneNote.
+        [Parameter(ParameterSetName = 'Current', Mandatory = $true)]
+        [switch]$Current,
+
+        # The ID of a specific section to retrieve.
+        [Parameter(ParameterSetName = 'Id', Mandatory = $true)]
+        [string]$Id,
+
+        # Name of the notebook to search.
+        [Parameter(ParameterSetName = 'ByNotebookName', Position = 0)]
+        [string]$NotebookName,
+
+        # Notebook XML element to retrieve sections from. Can be provided via
+        # pipeline or directly.
         [Parameter(
             ValueFromPipeline = $true,
             ParameterSetName = 'FromPipeline',
@@ -20,20 +38,12 @@ function Get-OneNoteSection {
         )]
         [System.Xml.XmlElement]$Notebook,
 
-        # Name of the notebook to search.
-        [Parameter(ParameterSetName = 'ByNotebookName', Position = 0)]
-        [string]$NotebookName,
-
         # Name of the section to retrieve, supporting wildcards and prefix
         # matching.
         [Parameter(ParameterSetName = 'ByNotebookName', Position = 1)]
         [Parameter(ParameterSetName = 'FromPipeline')]
         [SupportsWildcards()]
         [string]$Name = "*",
-
-        # If specified, retrieves only the currently viewed section in OneNote.
-        [Parameter(ParameterSetName = 'Current', Mandatory = $true)]
-        [switch]$Current,
 
         # The OneNote application object. If not provided, it will be created.
         [Alias('App')]
@@ -51,6 +61,7 @@ function Get-OneNoteSection {
 
     process {
         $hsSections = 3 # HierarchyScope.hsSections
+        $hsSelf = 0 # HierarchyScope.hsSelf
         $app = $OneNoteApplication
         $sections = @()
 
@@ -69,6 +80,15 @@ function Get-OneNoteSection {
             if ($sections.Count -gt 1) {
                 throw "There are currently $($sections.Count) sections that are viewed."
             }
+        }
+        elseif ($Id) {
+            # Get section by ID using hsSelf scope
+            $hierarchy = Get-OneNoteHierarchy `
+                -Scope $hsSelf `
+                -StartNodeId $Id `
+                -OneNoteApplication $app
+
+            $sections = @($hierarchy.Section)
         }
         else {
             # Determine which notebooks to retrieve sections from.
@@ -98,8 +118,8 @@ function Get-OneNoteSection {
         }
 
         # Tag each section with custom type name.
-        $sections | ForEach-Object -Process { 
-            $_.PSTypeNames.Insert(0, 'OneNote.Section'); $_ 
+        $sections | ForEach-Object -Process {
+            $_.PSTypeNames.Insert(0, 'OneNote.Section'); $_
         }
     }
 
