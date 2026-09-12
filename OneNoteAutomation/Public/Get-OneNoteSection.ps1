@@ -60,6 +60,14 @@ function Get-OneNoteSection {
     }
 
     process {
+        trap {
+            if ($comObjectCreated) {
+                $comObjectCreated = $false
+                Remove-ComObject -ComObject $OneNoteApplication
+            }
+            throw $_
+        }
+
         $hsSections = 3 # HierarchyScope.hsSections
         $hsSelf = 0 # HierarchyScope.hsSelf
         $app = $OneNoteApplication

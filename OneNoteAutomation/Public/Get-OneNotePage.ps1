@@ -87,6 +87,14 @@ function Get-OneNotePage {
     }
 
     process {
+        trap {
+            if ($comObjectCreated) {
+                $comObjectCreated = $false
+                Remove-ComObject -ComObject $OneNoteApplication
+            }
+            throw $_
+        }
+
         $hsPages = 4 # HierarchyScope.hsPages
         $app = $OneNoteApplication
         

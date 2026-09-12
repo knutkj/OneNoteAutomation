@@ -60,6 +60,14 @@ function Update-OneNotePage {
   }
 
   process {
+    trap {
+      if ($comObjectCreated) {
+        $comObjectCreated = $false
+        Remove-ComObject -ComObject $OneNoteApplication
+      }
+      throw $_
+    }
+
     if ($PSCmdlet.MyInvocation.BoundParameters["Verbose"]) {
       Write-Verbose "Starting process block."
       Write-Verbose ("Parameters: OneNoteApplication={0}" -f ($null -ne $OneNoteApplication))
