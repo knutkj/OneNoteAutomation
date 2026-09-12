@@ -63,7 +63,7 @@ function Show-OneNote {
         # Instantiate OneNote if needed.
         if (-not $OneNoteApplication) {
             $disposeApp = $true
-            $OneNoteApplication = New-Object -ComObject OneNote.Application
+            $OneNoteApplication = New-OneNoteApplication
         }
     }
 

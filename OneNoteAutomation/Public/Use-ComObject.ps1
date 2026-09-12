@@ -31,7 +31,12 @@ function Use-ComObject {
 
     $comObject = $null
     try {
-        $comObject = New-Object -ComObject $ProgId
+        if ($ProgId -eq 'OneNote.Application') {
+            $comObject = New-OneNoteApplication
+        }
+        else {
+            $comObject = New-Object -ComObject $ProgId
+        }
         & $Script $comObject
     }
     finally {

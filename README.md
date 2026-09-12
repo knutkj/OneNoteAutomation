@@ -1,4 +1,5 @@
 [![Publish PowerShell Module](https://github.com/knutkj/OneNoteAutomation/actions/workflows/publish.yml/badge.svg)](https://github.com/knutkj/OneNoteAutomation/actions/workflows/publish.yml)
+[![Test PowerShell Module](https://github.com/knutkj/OneNoteAutomation/actions/workflows/test.yml/badge.svg?branch=main&event=push)](https://github.com/knutkj/OneNoteAutomation/actions/workflows/test.yml)
 [![PowerShell Gallery Compatibility](https://img.shields.io/powershellgallery/p/OneNoteAutomation)](https://www.powershellgallery.com/packages/OneNoteAutomation)
 
 # Getting started with OneNoteAutomation
@@ -86,6 +87,23 @@ Use-ComObject -ProgId OneNote.Application -Script {
 `Use-ComObject` implements a C#-like `using` pattern: it creates the COM object,
 passes it to your script block, and guarantees cleanup in a `finally` block even
 if an error occurs. This is the recommended approach for batch operations.
+
+For explicit ownership, create an application with `New-OneNoteApplication` and
+release it when finished. Cmdlets receiving it through `-App` reuse it without
+taking ownership:
+
+```powershell
+$application = New-OneNoteApplication
+try {
+  Get-OneNoteNotebook -App $application
+}
+finally {
+  Remove-ComObject -ComObject $application
+}
+```
+
+`Use-ComObject -ProgId OneNote.Application` uses the same factory. Other ProgIDs
+continue to use generic COM activation.
 
 ### PowerShell Pipeline
 
@@ -315,6 +333,30 @@ Use `-Verbose` to see detailed operation logs:
 ```powershell
 Update-OneNotePage -Content $content -Verbose
 ```
+
+## Development
+
+### Unit Tests
+
+Run the tests from the repository root in Windows PowerShell 5.1:
+
+```powershell
+Invoke-Pester -Path ./tests
+```
+
+GitHub Actions runs the suite when a pull request is opened, reopened or
+updated, regardless of its target branch. It also runs whenever commits reach
+`main`, including through a merge. Tests can also be started manually from the
+Actions tab. The test badge shows the test status of `main`. Unit tests must
+never use OneNote or access notebooks. All OneNote COM interactions must be
+mocked, whether or not OneNote is installed. Failed tests or an empty test suite
+fail the CI job.
+
+### Releases
+
+Publishing a GitHub Release triggers publication to PowerShell Gallery. The
+release tag determines the module version. Draft releases, commits, PRs and
+merges do not publish a package.
 
 ## Next Steps
 

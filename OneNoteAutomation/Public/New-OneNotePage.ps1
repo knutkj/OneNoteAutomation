@@ -65,7 +65,7 @@ function New-OneNotePage {
         $disposeApp = $false
         if (-not $OneNoteApplication) {
             $disposeApp = $true
-            $OneNoteApplication = New-Object -ComObject OneNote.Application
+            $OneNoteApplication = New-OneNoteApplication
         }
     }
 

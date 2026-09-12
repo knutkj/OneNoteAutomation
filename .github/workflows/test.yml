@@ -1,0 +1,36 @@
+name: Test PowerShell Module
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: Pester (Windows PowerShell 5.1)
+    runs-on: windows-latest
+    defaults:
+      run:
+        shell: powershell
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Pester
+        run: |
+          $ErrorActionPreference = 'Stop'
+          Install-PackageProvider -Name NuGet -MinimumVersion 2.8.5.201 -Scope CurrentUser -Force
+          Install-Module -Name Pester -RequiredVersion 6.2.0 -Repository PSGallery -Scope CurrentUser -Force -SkipPublisherCheck
+
+      - name: Run unit tests
+        run: |
+          $ErrorActionPreference = 'Stop'
+            Import-Module Pester -RequiredVersion 6.2.0 -Force
+            $result = Invoke-Pester -Path ./tests -PassThru -Output Detailed
+            if ($result.Result -ne 'Passed' -or $result.TotalCount -eq 0) {
+              throw "Pester result: $($result.Result), $($result.TotalCount) total."
+          }
