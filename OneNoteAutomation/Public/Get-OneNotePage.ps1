@@ -82,7 +82,7 @@ function Get-OneNotePage {
         $comObjectCreated = $false
         if (-not $OneNoteApplication) {
             $comObjectCreated = $true
-            $OneNoteApplication = New-Object -ComObject OneNote.Application
+            $OneNoteApplication = New-OneNoteApplication
         }
     }
 
