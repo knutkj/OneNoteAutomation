@@ -68,6 +68,14 @@ function Show-OneNote {
     }
 
     process {
+        trap {
+            if ($disposeApp) {
+                $disposeApp = $false
+                Remove-ComObject -ComObject $OneNoteApplication
+            }
+            throw $_
+        }
+
         # For the ID parameter set, we navigate immediately
         if ($PSCmdlet.ParameterSetName -eq 'ById') {
             $app = $OneNoteApplication
@@ -93,6 +101,14 @@ function Show-OneNote {
     }
 
     end {
+        trap {
+            if ($disposeApp) {
+                $disposeApp = $false
+                Remove-ComObject -ComObject $OneNoteApplication
+            }
+            throw $_
+        }
+
         $app = $OneNoteApplication
 
         # Handle the collected entities based on count and parameters
@@ -107,7 +123,10 @@ function Show-OneNote {
                 }
                 else {
                     Write-Verbose "No entity was selected. Navigation canceled."
-                    if ($disposeApp) { Remove-ComObject -ComObject $OneNoteApplication }
+                    if ($disposeApp) {
+                        $disposeApp = $false
+                        Remove-ComObject -ComObject $OneNoteApplication
+                    }
                     return
                 }
             }
@@ -136,6 +155,7 @@ function Show-OneNote {
         }
 
         if ($disposeApp) {
+            $disposeApp = $false
             Remove-ComObject -ComObject $OneNoteApplication
         }
     }

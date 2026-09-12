@@ -46,6 +46,14 @@ function Get-OneNoteNotebook {
     }
 
     process {
+        trap {
+            if ($disposeApp) {
+                $disposeApp = $false
+                Remove-ComObject -ComObject $OneNoteApplication
+            }
+            throw $_
+        }
+
         $notebooks = @()
 
         if ($Current) {

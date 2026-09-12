@@ -40,7 +40,9 @@ function Use-ComObject {
         & $Script $comObject
     }
     finally {
-        Remove-ComObject -ComObject $comObject
+        if ($null -ne $comObject) {
+            Remove-ComObject -ComObject $comObject
+        }
     }
 }
 

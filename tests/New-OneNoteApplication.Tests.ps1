@@ -19,6 +19,22 @@ Describe 'New-OneNoteApplication' {
 }
 
 Describe 'Use-ComObject creation' {
+    It 'preserves a creation failure without attempting cleanup' {
+        InModuleScope OneNoteAutomation {
+            Mock New-OneNoteApplication { throw 'Simulated application creation failure' }
+            Mock New-Object { throw 'Unexpected direct COM activation' }
+            Mock Remove-ComObject {}
+
+            { Use-ComObject -ProgId 'OneNote.Application' -Script {
+                    throw 'Script must not run when creation fails'
+                } } | Should -Throw -ExpectedMessage '*Simulated application creation failure*'
+
+            Should -Invoke New-OneNoteApplication -Times 1 -Exactly -Scope It
+            Should -Invoke New-Object -Times 0 -Exactly -Scope It
+            Should -Invoke Remove-ComObject -Times 0 -Exactly -Scope It
+        }
+    }
+
     It 'uses the OneNote factory and releases its result' {
         InModuleScope OneNoteAutomation {
             $script:createdApplication = [pscustomobject]@{ Name = 'Test application' }

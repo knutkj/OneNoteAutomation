@@ -70,6 +70,14 @@ function New-OneNotePage {
     }
 
     process {
+        trap {
+            if ($disposeApp -and $OneNoteApplication) {
+                $disposeApp = $false
+                Remove-ComObject -ComObject $OneNoteApplication
+            }
+            throw $_
+        }
+
         $app = $OneNoteApplication
         [string]$newPageId = ''
         $app.CreateNewPage($Id, [ref]$newPageId, $PageStyle)
