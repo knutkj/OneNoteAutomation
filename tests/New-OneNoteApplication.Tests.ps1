@@ -3,7 +3,35 @@ BeforeAll {
 }
 
 Describe 'New-OneNoteApplication' {
-    It 'returns the OneNote COM object created by New-Object' {
+    It 'creates the managed wrapper on PowerShell 7' -Skip:($PSEdition -ne 'Core') {
+        InModuleScope OneNoteAutomation {
+            $script:createdApplication = [pscustomobject]@{ Name = 'Managed test application' }
+            Mock New-Object { $script:createdApplication }
+
+            $application = New-OneNoteApplication
+
+            [object]::ReferenceEquals($application, $script:createdApplication) | Should -BeTrue
+            [System.IDisposable].IsAssignableFrom(('OneNoteAutomation.Interop.OneNoteApplication' -as [type])) |
+                Should -BeTrue
+            Should -Invoke New-Object -Times 1 -Exactly -Scope It -ParameterFilter {
+                $TypeName -eq 'OneNoteAutomation.Interop.OneNoteApplication' -and -not $ComObject
+            }
+        }
+    }
+
+    It 'reuses loaded interop types' -Skip:($PSEdition -ne 'Core') {
+        InModuleScope OneNoteAutomation {
+            Initialize-OneNoteInterop
+            Mock Add-Type { throw 'Unexpected recompilation' }
+
+            Initialize-OneNoteInterop
+            Initialize-OneNoteInterop
+
+            Should -Invoke Add-Type -Times 0 -Exactly -Scope It
+        }
+    }
+
+    It 'returns the OneNote COM object created by New-Object' -Skip:($PSEdition -eq 'Core') {
         InModuleScope OneNoteAutomation {
             $script:createdApplication = [pscustomobject]@{ Name = 'Test application' }
             Mock New-Object { $script:createdApplication }

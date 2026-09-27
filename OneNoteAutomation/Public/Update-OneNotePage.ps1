@@ -52,6 +52,7 @@ function Update-OneNotePage {
   )
 
   begin {
+    Assert-OneNoteApplication -Application $OneNoteApplication
     $comObjectCreated = $false
     if (-not $OneNoteApplication) {
       $comObjectCreated = $true

@@ -7,7 +7,8 @@
 # Remove-ComObject safely releases a COM object by calling ReleaseComObject,
 # removing the variable, and forcing garbage collection. This is useful when
 # automating Office or other COM-based applications to ensure resources are
-# properly freed.
+# properly freed. Managed application wrappers are released through
+# IDisposable.Dispose.
 #
 # .PARAMETER ComObject
 # The COM object to release and clean up.
@@ -27,13 +28,18 @@
 function Remove-ComObject {
     [CmdletBinding()]
     param(
-        # The COM object to release and clean up.
+        # The COM object or disposable application wrapper to release.
         [Parameter(Mandatory)]
         [object]$ComObject
     )
 
     if ($null -ne $ComObject) {
-        [System.Runtime.InteropServices.Marshal]::ReleaseComObject($ComObject) | Out-Null
+        if ($ComObject -is [System.IDisposable]) {
+            $ComObject.Dispose()
+        }
+        else {
+            [System.Runtime.InteropServices.Marshal]::ReleaseComObject($ComObject) | Out-Null
+        }
         Remove-Variable ComObject -ErrorAction SilentlyContinue
         [GC]::Collect()
         [GC]::WaitForPendingFinalizers()

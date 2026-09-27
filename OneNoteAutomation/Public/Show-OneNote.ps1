@@ -57,6 +57,7 @@ function Show-OneNote {
     )
 
     begin {
+        Assert-OneNoteApplication -Application $OneNoteApplication
         $disposeApp = $false
         $allEntities = @()
 

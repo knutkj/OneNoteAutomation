@@ -15,7 +15,7 @@ See https://github.com/knutkj/OneNoteAutomation for more information.'
 
     # Compatibility.
     PowerShellVersion    = '5.1'
-    CompatiblePSEditions = 'Desktop'
+    CompatiblePSEditions = @('Desktop', 'Core')
 
     # Functions are dynamically discovered from Public/*.ps1 files during CI/CD.
     # Convention: one function per file, where filename matches function name.
@@ -29,7 +29,7 @@ See https://github.com/knutkj/OneNoteAutomation for more information.'
 
     PrivateData          = @{
         PSData = @{
-            Tags       = 'OneNote', 'Automation', 'PSEdition_Desktop', 'Windows'
+            Tags       = 'OneNote', 'Automation', 'PSEdition_Desktop', 'PSEdition_Core', 'Windows'
             ProjectUri = 'https://github.com/knutkj/OneNoteAutomation'
             LicenseUri = 'https://github.com/knutkj/OneNoteAutomation/blob/main/LICENSE'
 

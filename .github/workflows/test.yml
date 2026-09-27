@@ -11,19 +11,29 @@ permissions:
 
 jobs:
   test:
-    name: Pester (Windows PowerShell 5.1)
+    name: Pester (${{ matrix.name }})
     runs-on: windows-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: Windows PowerShell 5.1
+            shell: powershell
+          - name: PowerShell 7
+            shell: pwsh
     defaults:
       run:
-        shell: powershell
+        shell: ${{ matrix.shell }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Install Pester
         run: |
           $ErrorActionPreference = 'Stop'
-          Install-PackageProvider -Name NuGet -MinimumVersion 2.8.5.201 -Scope CurrentUser -Force
+          if ($PSEdition -eq 'Desktop') {
+            Install-PackageProvider -Name NuGet -MinimumVersion 2.8.5.201 -Scope CurrentUser -Force
+          }
           Install-Module -Name Pester -RequiredVersion 6.2.0 -Repository PSGallery -Scope CurrentUser -Force -SkipPublisherCheck
 
       - name: Run unit tests

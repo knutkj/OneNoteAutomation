@@ -35,6 +35,7 @@ function Get-OneNoteNotebook {
     )
 
     begin {
+        Assert-OneNoteApplication -Application $OneNoteApplication
         $hsNotebooks = 2 # HierarchyScope.hsNotebooks
         $disposeApp = $false
 
