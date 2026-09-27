@@ -52,6 +52,7 @@ function Get-OneNoteSection {
     )
 
     begin {
+        Assert-OneNoteApplication -Application $OneNoteApplication
         $comObjectCreated = $false
         if (-not $OneNoteApplication) {
             $comObjectCreated = $true

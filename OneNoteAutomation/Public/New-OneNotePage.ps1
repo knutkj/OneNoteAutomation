@@ -60,6 +60,7 @@ function New-OneNotePage {
     )
 
     begin {
+        Assert-OneNoteApplication -Application $OneNoteApplication
         $hsSelf = 0 # HierarchyScope.hsSelf
         $hsPages = 4 # HierarchyScope.hsPages
         $disposeApp = $false

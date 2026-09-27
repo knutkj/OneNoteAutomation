@@ -15,7 +15,7 @@ more natural scripting experience.
 
 ## Prerequisites
 
-- **PowerShell 5.1** on Windows.
+- **Windows PowerShell 5.1 or PowerShell 7** on Windows.
 - **Microsoft OneNote** desktop client application.
 
 ## Installation
@@ -104,6 +104,18 @@ finally {
 
 `Use-ComObject -ProgId OneNote.Application` uses the same factory. Other ProgIDs
 continue to use generic COM activation.
+
+On PowerShell 7, the factory returns a managed C# wrapper around the OneNote
+COM application. Its interop declarations are compiled on first use with
+`Add-Type`; no separate OneNote interop DLL is required. Windows PowerShell
+5.1 continues to return the raw COM object. `Remove-ComObject` handles both.
+
+On PowerShell 7, create shared applications with `New-OneNoteApplication`.
+Passing a raw COM object to `-App` is rejected. The wrapper supports the
+application-level calls used by the module, including reference parameters
+and convenience overloads. Returned COM subobjects, such as `Windows`,
+`QuickFiling()` results, `COMAddIns`, and `LanguageSettings`, are not wrapped
+and are not supported for direct use from PowerShell 7.
 
 ### PowerShell Pipeline
 
@@ -338,13 +350,14 @@ Update-OneNotePage -Content $content -Verbose
 
 ### Unit Tests
 
-Run the tests from the repository root in Windows PowerShell 5.1:
+Run the tests from the repository root in Windows PowerShell 5.1 or
+PowerShell 7 on Windows:
 
 ```powershell
 Invoke-Pester -Path ./tests
 ```
 
-GitHub Actions runs the suite when a pull request is opened, reopened or
+GitHub Actions runs the suite in both shells when a pull request is opened, reopened or
 updated, regardless of its target branch. It also runs whenever commits reach
 `main`, including through a merge. Tests can also be started manually from the
 Actions tab. The test badge shows the test status of `main`. Unit tests must

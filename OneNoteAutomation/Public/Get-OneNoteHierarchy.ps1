@@ -68,6 +68,8 @@ function Get-OneNoteHierarchy {
         $OneNoteApplication = $null
     )
 
+    Assert-OneNoteApplication -Application $OneNoteApplication
+
     $script = {
         param($App)
         $xml = ''
